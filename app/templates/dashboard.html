@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto AI Analyst - Professional Trading Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-content">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <span>Crypto AI Analyst</span>
+            </div>
+            <div class="nav-right">
+                <span class="last-update">
+                    <span class="live-indicator"></span>
+                    Last updated: <span id="update-time"></span>
+                </span>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-header">
+                    <i class="fab fa-bitcoin"></i>
+                    <span>Bitcoin Price</span>
+                </div>
+                <div class="stat-value" id="btc-price">$0</div>
+                <div class="stat-change" id="price-change">0%</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Sentiment</span>
+                </div>
+                <div class="stat-value" id="market-sentiment">Neutral</div>
+                <div class="stat-subtitle">Market Analysis</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Volatility</span>
+                </div>
+                <div class="stat-value" id="volatility">Low</div>
+                <div class="stat-subtitle">24h Range</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="fas fa-newspaper"></i>
+                    <span>News Impact</span>
+                </div>
+                <div class="stat-value" id="news-count">0</div>
+                <div class="stat-subtitle">Recent Updates</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="chart-section">
+                <div class="section-header">
+                    <h2>Price Movement</h2>
+                    <div class="timeframe-selector">
+                        <button class="active">1H</button>
+                        <button>4H</button>
+                        <button>1D</button>
+                        <button>1W</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="btcChart"></canvas>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="technical-indicators">
+                    <h2>Technical Analysis</h2>
+                    <div id="technical-indicators" class="indicators-grid"></div>
+                </div>
+
+                <div class="news-feed">
+                    <h2>Market News</h2>
+                    <div id="news-feed" class="news-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='/js/dashboard.js') }}"></script>
+</body>
+</html>

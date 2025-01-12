@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from postgrest import PostgrestClient
-from gotrue import GoTrueClient
 from openai import OpenAI
 import requests
 import json
