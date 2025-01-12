@@ -3,15 +3,14 @@ name: Crypto Monitor Schedule
 on:
   schedule:
     - cron: '0 12 * * *'  # Runs at 12:00 UTC daily
-  workflow_dispatch:  # Allows manual trigger for testing
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   run-crypto-monitor:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
     
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -21,6 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install wheel
         pip install -r requirements.txt
         
     - name: Run crypto monitor
