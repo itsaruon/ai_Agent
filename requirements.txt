@@ -1,0 +1,6 @@
+python-dotenv
+supabase
+requests
+matplotlib
+openai
+python-supabase
