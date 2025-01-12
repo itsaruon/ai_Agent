@@ -1,7 +1,8 @@
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from supabase import create_client
+from postgrest import PostgrestClient
+from gotrue import GoTrueClient
 from openai import OpenAI
 import requests
 import json
@@ -19,26 +20,28 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
 def get_latest_data():
     """Fetch the latest data from Supabase tables"""
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        postgrest_client = PostgrestClient(
+            base_url=f"{SUPABASE_URL}/rest/v1",
+            headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}"
+            }
+        )
         
         # Get last 5 BTC prices
-        btc_prices = (supabase
-            .from_("btc_price")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(5)
-            .execute()
-        ).data
+        btc_prices = postgrest_client.from_("btc_price")\
+            .select("*")\
+            .order("created_at", desc=True)\
+            .limit(5)\
+            .execute().data
         
         # Get last 10 financial news items
-        news_items = (supabase
-            .from_("eco_info")
-            .select("*")
-            .order("timestamp", desc=True)
-            .limit(10)
-            .execute()
-        ).data
-        
+        news_items = postgrest_client.from_("eco_info")\
+            .select("*")\
+            .order("timestamp", desc=True)\
+            .limit(10)\
+            .execute().data
+            
         return btc_prices, news_items
         
     except Exception as e:
