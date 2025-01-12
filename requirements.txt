@@ -3,4 +3,3 @@ supabase
 requests
 matplotlib
 openai
-python-supabase
