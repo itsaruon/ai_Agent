@@ -19,8 +19,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 app = FastAPI()
 
-# Mount static files and templates
+# Mount static files BEFORE any routes
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Templates setup
 templates = Jinja2Templates(directory="app/templates")
 
 async def fetch_from_supabase(table_name, limit=24):
@@ -30,26 +32,33 @@ async def fetch_from_supabase(table_name, limit=24):
         async with httpx.AsyncClient() as client:
             headers = {
                 "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}"
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
             }
+            
             url = f"{SUPABASE_URL}/rest/v1/{table_name}"
             
-            # Add proper column names based on your table structure
-            if table_name == 'finance_news':
-                params = {
-                    "select": "id,timestamp,finance_info",
-                    "order": "timestamp.desc",
-                    "limit": str(limit)
-                }
-            else:  # bitcoin_prices table
-                params = {
-                    "select": "*",
-                    "order": "timestamp.desc",
-                    "limit": str(limit)
-                }
+            # Use different order columns based on the table
+            if table_name == 'btc_price':
+                order_column = 'created_at'
+            else:  # eco_info table
+                order_column = 'timestamp'
+                
+            params = {
+                "select": "*",
+                f"order": f"{order_column}.desc",
+                "limit": limit
+            }
             
-            print(f"Making request to: {url} with params: {params}")
-            response = await client.get(url, headers=headers, params=params)
+            print(f"Making request to: {url}")
+            print(f"With params: {params}")
+            
+            response = await client.get(
+                url,
+                headers=headers,
+                params=params
+            )
             
             print(f"Response status: {response.status_code}")
             print(f"Response body: {response.text[:200]}...")
@@ -65,54 +74,55 @@ async def fetch_from_supabase(table_name, limit=24):
 @app.get("/api/btc-price")
 async def get_btc_price():
     try:
-        print("Attempting to fetch BTC prices...")
         prices = await fetch_from_supabase('btc_price', 24)
         
         if not prices:
-            print("No prices found in database - returning empty array")
+            print("No prices found in database")
             return JSONResponse([])
-            
-        print(f"Found {len(prices)} price entries")
-        print("Sample price data:", prices[0] if prices else "No data")
             
         formatted_prices = []
         for price in prices:
             try:
                 formatted_prices.append({
                     'price': float(price.get('price', 0)),
-                    'timestamp': price.get('timestamp', '')
+                    'timestamp': price.get('created_at', '')
                 })
             except Exception as e:
-                print(f"Error formatting price entry: {price}")
+                print(f"Error formatting price: {price}")
                 print(f"Error details: {str(e)}")
                 
+        print(f"Returning {len(formatted_prices)} prices")
         return JSONResponse(formatted_prices)
         
     except Exception as e:
         print(f"Error in get_btc_price: {str(e)}")
         print(traceback.format_exc())
         return JSONResponse(
-            {"error": f"Failed to fetch prices: {str(e)}"},
+            {"error": str(e)},
             status_code=500
         )
 
 @app.get("/api/news")
 async def get_news():
     try:
-        news_items = await fetch_from_supabase('finance_news', 10)
+        news_items = await fetch_from_supabase('eco_info', 10)
         
         if not news_items:
             print("No news found in database")
             return JSONResponse([])
-        
-        # Format news items to match your table structure
+            
         formatted_news = []
         for item in news_items:
-            formatted_news.append({
-                'finance_info': item.get('finance_info', ''),
-                'timestamp': item.get('timestamp', '')
-            })
-            
+            try:
+                formatted_news.append({
+                    'id': item.get('id'),
+                    'finance_info': item.get('finance_info', ''),
+                    'timestamp': item.get('timestamp', '')
+                })
+            except Exception as e:
+                print(f"Error formatting news item: {item}")
+                print(f"Error details: {str(e)}")
+        
         print(f"Returning {len(formatted_news)} news items")
         return JSONResponse(formatted_news)
         

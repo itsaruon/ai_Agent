@@ -10,50 +10,157 @@ const SENTIMENT_THRESHOLDS = {
     BEARISH: -2
 };
 
+// Add Chart.js initialization
+let priceChart;
+
+function initChart() {
+    const ctx = document.getElementById('btcChart').getContext('2d');
+    priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Bitcoin Price',
+                data: [],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleColor: '#e5e7eb',
+                    bodyColor: '#e5e7eb',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    padding: 12
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(75, 85, 99, 0.2)'
+                    },
+                    ticks: {
+                        color: '#9ca3af',
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(75, 85, 99, 0.2)'
+                    },
+                    ticks: {
+                        color: '#9ca3af',
+                        maxRotation: 0
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChart(prices) {
+    if (!priceChart) {
+        initChart();
+    }
+
+    const labels = prices.map(p => {
+        const date = new Date(p.timestamp || p.created_at);
+        return date.toLocaleTimeString();
+    }).reverse();  // Reverse to show oldest to newest
+
+    const data = prices.map(p => p.price).reverse();
+
+    priceChart.data.labels = labels;
+    priceChart.data.datasets[0].data = data;
+    priceChart.update();
+}
+
 async function fetchData() {
     try {
         console.log('Fetching live data...');
-        showLoading();  // Show loading state
         
-        // Fetch price data
-        const priceResponse = await fetch('/api/btc-price');
-        console.log('Price Response Status:', priceResponse.status);
-        
-        if (!priceResponse.ok) {
-            throw new Error(`HTTP error! status: ${priceResponse.status}`);
+        // Update last updated time first
+        const now = new Date();
+        document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleString()}`;
+
+        const [priceResponse, newsResponse] = await Promise.all([
+            fetch('/api/btc-price'),
+            fetch('/api/news')
+        ]);
+
+        if (!priceResponse.ok || !newsResponse.ok) {
+            throw new Error('API request failed');
         }
-        
+
         const prices = await priceResponse.json();
+        const news = await newsResponse.json();
+        
         console.log('Received price data:', prices);
 
-        // Fetch news data
-        const newsResponse = await fetch('/api/news');
-        console.log('News Response Status:', newsResponse.status);
-        
-        if (!newsResponse.ok) {
-            throw new Error(`HTTP error! status: ${newsResponse.status}`);
-        }
-        
-        const news = await newsResponse.json();
-        console.log('Received news data:', news);
-
-        if (prices.error || news.error) {
-            console.error('API Error:', prices.error || news.error);
-            return;
-        }
-
-        // Update the dashboard only if we have price data
         if (prices && prices.length > 0) {
-            console.log('Updating dashboard with data:', { prices, news });
-            updateDashboard(prices, news);
-        } else {
-            console.error('No price data received');
+            const latestPrice = prices[0].price;
+            const oldestPrice = prices[prices.length - 1].price;
+            
+            // Update the price display
+            document.getElementById('btc-price').textContent = `$${latestPrice.toLocaleString()}`;
+            
+            // Calculate price change
+            const priceChange = ((latestPrice - oldestPrice) / oldestPrice) * 100;
+            const priceChangeElement = document.getElementById('price-change');
+            priceChangeElement.textContent = `${priceChange.toFixed(2)}%`;
+            
+            // Update price change color
+            if (priceChange > 0) {
+                priceChangeElement.classList.add('text-green-500');
+                priceChangeElement.classList.remove('text-red-500');
+            } else if (priceChange < 0) {
+                priceChangeElement.classList.add('text-red-500');
+                priceChangeElement.classList.remove('text-green-500');
+            }
+
+            // Update chart
+            updateChart(prices);
+            
+            // Update technical analysis
+            updateTechnicalAnalysis(prices);
         }
-        
+
+        // Update news feed
+        if (news && news.length > 0) {
+            const newsContainer = document.getElementById('news-feed');
+            newsContainer.innerHTML = news.map(item => `
+                <div class="news-item">
+                    <p class="news-title">${item.finance_info}</p>
+                    <span class="news-time">${new Date(item.timestamp).toLocaleString()}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('news-count').textContent = news.length;
+        }
+
+        // Update last updated time
+        document.getElementById('update-time').textContent = new Date().toLocaleString();
+
     } catch (error) {
         console.error('Error fetching data:', error);
-    } finally {
-        hideLoading();  // Hide loading state
     }
 }
 
@@ -201,44 +308,6 @@ function showNotification(message) {
     });
 }
 
-function updateChart(prices) {
-    const ctx = document.getElementById('btcChart').getContext('2d');
-    
-    if (btcChart) {
-        btcChart.destroy();
-    }
-
-    btcChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: prices.map(p => new Date(p.created_at).toLocaleString()),
-            datasets: [{
-                label: 'BTC Price (USD)',
-                data: prices.map(p => p.price),
-                borderColor: '#2563eb',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    ticks: {
-                        callback: value => `$${value.toLocaleString()}`
-                    }
-                }
-            }
-        }
-    });
-}
-
 function updateNewsFeed(news) {
     const newsFeed = document.getElementById('news-feed');
     newsFeed.innerHTML = news.map(item => `
@@ -249,12 +318,111 @@ function updateNewsFeed(news) {
     `).join('');
 }
 
-// Initial load with immediate feedback
-console.log('Dashboard script loaded, initiating first data fetch...');
+function updateTechnicalAnalysis(prices) {
+    if (!prices || prices.length < 14) return; // Need at least 14 data points for RSI
+    
+    // Calculate indicators
+    const indicators = {
+        sma: calculateSMA(prices, 20),    // 20-period Simple Moving Average
+        rsi: calculateRSI(prices, 14),     // 14-period Relative Strength Index
+        macd: calculateMACD(prices),       // Moving Average Convergence Divergence
+        volume: calculateVolume(prices)    // 24h Volume
+    };
+    
+    // Update Technical Analysis section
+    const technicalSection = document.getElementById('technical-analysis');
+    technicalSection.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+            <div class="indicator-card">
+                <span class="indicator-label">SMA (20)</span>
+                <span class="indicator-value">$${indicators.sma.toLocaleString()}</span>
+            </div>
+            <div class="indicator-card">
+                <span class="indicator-label">RSI (14)</span>
+                <span class="indicator-value ${getRSIClass(indicators.rsi)}">${indicators.rsi.toFixed(2)}</span>
+            </div>
+            <div class="indicator-card">
+                <span class="indicator-label">MACD</span>
+                <span class="indicator-value ${getMACDClass(indicators.macd)}">${indicators.macd.toFixed(2)}</span>
+            </div>
+            <div class="indicator-card">
+                <span class="indicator-label">24h Volume</span>
+                <span class="indicator-value">$${indicators.volume.toLocaleString()}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Helper functions for technical indicators
+function calculateSMA(prices, period) {
+    const priceValues = prices.slice(0, period).map(p => p.price);
+    return priceValues.reduce((a, b) => a + b, 0) / period;
+}
+
+function calculateRSI(prices, period) {
+    let gains = 0;
+    let losses = 0;
+    
+    for (let i = 1; i < period; i++) {
+        const difference = prices[i-1].price - prices[i].price;
+        if (difference > 0) {
+            gains += difference;
+        } else {
+            losses -= difference;
+        }
+    }
+    
+    const avgGain = gains / period;
+    const avgLoss = losses / period;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+}
+
+function calculateMACD(prices) {
+    const ema12 = calculateEMA(prices, 12);
+    const ema26 = calculateEMA(prices, 26);
+    return ema12 - ema26;
+}
+
+function calculateEMA(prices, period) {
+    const priceValues = prices.map(p => p.price);
+    const multiplier = 2 / (period + 1);
+    let ema = priceValues[0];
+    
+    for (let i = 1; i < period; i++) {
+        ema = (priceValues[i] - ema) * multiplier + ema;
+    }
+    
+    return ema;
+}
+
+function calculateVolume(prices) {
+    // In a real implementation, this would use actual volume data
+    return prices[0].price * 100; // Placeholder calculation
+}
+
+// Helper functions for styling
+function getRSIClass(rsi) {
+    if (rsi > 70) return 'text-red-500';
+    if (rsi < 30) return 'text-green-500';
+    return 'text-gray-300';
+}
+
+function getMACDClass(macd) {
+    if (macd > 0) return 'text-green-500';
+    return 'text-red-500';
+}
+
+// Initial load
+initChart();
 fetchData();
 
-// Refresh every minute
-setInterval(fetchData, 60000);
+// Initial fetch
+document.addEventListener('DOMContentLoaded', () => {
+    fetchData();
+    // Update every 30 seconds without page refresh
+    setInterval(fetchData, 30000);
+});
 
 // Add loading indicators
 function showLoading() {

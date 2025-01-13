@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crypto AI Analyst - Professional Trading Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/style.css?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -78,7 +78,7 @@
                         <button>1W</button>
                     </div>
                 </div>
-                <div class="chart-container">
+                <div class="chart-container" style="height: 300px; position: relative;">
                     <canvas id="btcChart"></canvas>
                 </div>
             </div>
@@ -86,12 +86,16 @@
             <div class="side-panel">
                 <div class="technical-indicators">
                     <h2>Technical Analysis</h2>
-                    <div id="technical-indicators" class="indicators-grid"></div>
+                    <div id="technical-analysis" class="indicators-grid">
+                        <!-- Technical indicators will be inserted here by JavaScript -->
+                    </div>
                 </div>
 
                 <div class="news-feed">
                     <h2>Market News</h2>
-                    <div id="news-feed" class="news-list"></div>
+                    <div id="news-feed" class="news-feed-container">
+                        <!-- News items will be inserted here by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
